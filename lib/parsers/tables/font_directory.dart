@@ -25,6 +25,7 @@ class FontDirectory implements TtfTable {
     for (var i = 0; i < numTables; i++) {
       var entry = new TableDirectoryEntry();
       entry.name = reader.readString(4);
+//      print('$i ${entry.name}');
       entry.checksum = reader.readUnsignedInt();
       entry.offset = reader.readUnsignedInt();
       entry.length = reader.readUnsignedInt();

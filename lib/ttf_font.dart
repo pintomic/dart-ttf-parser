@@ -8,9 +8,12 @@ class TtfFont {
   TtfTableHhea hhea;
   TtfTableHmtx hmtx;
   TtfTableLoca loca;
+  TtfTableGdef gdef;
   TtfTableGlyf glyf;
+  TtfTableGpos gpos;
   TtfTableKern kern;
   TtfTableName name;
+  TtfTableOS2  os2;
 
   TtfFont() {
     directory = new FontDirectory();
@@ -19,10 +22,13 @@ class TtfFont {
     cmap = new TtfTableCmap();
     hhea = new TtfTableHhea();
     name = new TtfTableName();
+    os2 = new TtfTableOS2();
     hmtx = new TtfTableHmtx(this);
     loca = new TtfTableLoca(this);
     glyf = new TtfTableGlyf(this);
     kern = new TtfTableKern(this);
+    gdef = new TtfTableGdef(this);
+    gpos = new TtfTableGpos(this);
   }
   
   int get unitsPerEm => head.unitsPerEm;
@@ -53,5 +59,18 @@ class TtfFont {
     bbox.xMax = getPixels(glyphInfo.xMax, sizeInEm);
     bbox.yMax = getPixels(glyphInfo.yMax, sizeInEm);
     return bbox;
+  }
+
+  HtmxLongHorMetric getHmtx(int charCode) {
+    int glyphIndex = cmap.charToGlyphIndexMap[charCode];
+    if (glyphIndex == null) return null;
+    var entry = hmtx.metrics[glyphIndex];
+    return entry;
+  }
+
+  String getStringFromGlyph(int glyphID) {
+    int charCode = cmap.glyphToCharIndexMap[glyphID];
+    if (charCode == null) return '';
+    return String.fromCharCode(charCode);
   }
 }

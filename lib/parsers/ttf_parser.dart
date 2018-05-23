@@ -53,6 +53,24 @@ class TtfParser {
       font.kern.parseData(reader);
     }
 
+    if (font.directory.containsTable("GDEF")) {
+      var gdefEntry = font.directory.getTableEntry("GDEF");
+      reader.seek(gdefEntry.offset);
+      font.gdef.parseData(reader);
+    }
+
+    if (font.directory.containsTable("GPOS")) {
+      var gposEntry = font.directory.getTableEntry("GPOS");
+      reader.seek(gposEntry.offset);
+      font.gpos.parseData(reader);
+    }
+
+    if (font.directory.containsTable("OS/2")) {
+      var os2Entry = font.directory.getTableEntry("OS/2");
+      reader.seek(os2Entry.offset);
+      font.os2.parseData(reader);
+    }
+
     return font;
   }
 }

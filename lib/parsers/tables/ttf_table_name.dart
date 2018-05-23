@@ -33,7 +33,7 @@ class TtfTableName implements TtfTable {
       if (platformID == 1) {
         int currentPosition = reader.currentPosition;
         reader.seek(basePosition + stringOffset + offset);
-        _registerString(nameID, reader.readStringUtf8(length));
+        _registerString(nameID, reader.readString(length));
         reader.seek(currentPosition);
       }
     }

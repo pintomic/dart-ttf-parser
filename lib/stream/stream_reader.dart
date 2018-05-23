@@ -21,7 +21,7 @@ abstract class StreamReader {
   String readStringUtf8(int length) {
     List<int> data = new List<int>();
     data = readBytes(length);
-    return new Utf8Codec().decode(data);
+    return utf8.decode(data);
   }
 
   // Read a signed byte from the stream
