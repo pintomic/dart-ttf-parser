@@ -73,7 +73,10 @@ class TtfTableGpos implements TtfTable {
             }
           } else if (posFormat == 2) { // PairPosFormat 2
             var pairPosFormat = _parsePairPosFormat2(reader);
-            List<List<int>> classRecords = new List.generate(pairPosFormat.class1Count, (_) => new List<int>(pairPosFormat.class2Count));
+            List<List<int>> classRecords = new List.generate(
+                pairPosFormat.class1Count, (_) =>
+            new List<int>(
+                pairPosFormat.class2Count));
 //              (pairPosFormat.class1Count * pairPosFormat.class2Count);
 //            print('classRecords ${classRecords.length}');
             for (var i = 0; i < pairPosFormat.class1Count; i++) {
@@ -91,7 +94,8 @@ class TtfTableGpos implements TtfTable {
               var classDef1Format1 = _parseClassDefFormat1(reader);
               print(
                   'ClassDef1Format $classDef1Format startGlyphID ${classDef1Format1
-                      .startGlyphID} glyphCount ${classDef1Format1.glyphCount}');
+                      .startGlyphID} glyphCount ${classDef1Format1
+                      .glyphCount}');
             } else if (classDef1Format == 2) {
               classDef1 = _parseClassDefFormat2(reader);
               print(
@@ -105,25 +109,31 @@ class TtfTableGpos implements TtfTable {
               var classDef2Format1 = _parseClassDefFormat1(reader);
               print(
                   'ClassDef2Format $classDef2Format startGlyphID ${classDef2Format1
-                      .startGlyphID} glyphCount ${classDef2Format1.glyphCount}');
+                      .startGlyphID} glyphCount ${classDef2Format1
+                      .glyphCount}');
             } else if (classDef2Format == 2) {
               classDef2 = _parseClassDefFormat2(reader);
               print(
                   'ClassDef2Format $classDef2Format classRangeCount ${classDef2
                       .classRangeCount}');
             }
-            for (var i = 0; i < classDef1.classRangeCount; i++) {
-              _ClassRangeRecord record1 = classDef1.classRangeRecords[i];
-              for (var j = 0; j < classDef2.classRangeCount; j++) {
-                _ClassRangeRecord record2 = classDef2.classRangeRecords[j];
-                final int xAdvance = classRecords[record1.classDef][record2.classDef];
-                if (xAdvance != 0) {
+            if (classDef1Format == 2 && classDef2Format == 2) {
+              for (var i = 0; i < classDef1.classRangeCount; i++) {
+                _ClassRangeRecord record1 = classDef1.classRangeRecords[i];
+                for (var j = 0; j < classDef2.classRangeCount; j++) {
+                  _ClassRangeRecord record2 = classDef2.classRangeRecords[j];
+                  final int xAdvance = classRecords[record1.classDef][record2
+                      .classDef];
+                  if (xAdvance != 0) {
 //                  print('class1Def.class ${record1
 //                      .classDef} class2Def.class ${record2
 //                      .classDef} advance $xAdvance');
-                  for (var k = record1.startGlyphID; k <= record1.endGlyphID; k++) {
-                    for (var l = record2.startGlyphID; l <= record2.endGlyphID; l++) {
-                      _registerKerning(k, l, xAdvance);
+                    for (var k = record1.startGlyphID; k <= record1.endGlyphID;
+                    k++) {
+                      for (var l = record2.startGlyphID; l <=
+                          record2.endGlyphID; l++) {
+                        _registerKerning(k, l, xAdvance);
+                      }
                     }
                   }
                 }
@@ -136,6 +146,30 @@ class TtfTableGpos implements TtfTable {
               final coverageTable = _parseCoverageFormat1(reader);
               print('CoverageFormat 1 count ${coverageTable
                   .glyphCount} ${coverageTable.glyphArray}');
+              for (var i = 0; i < coverageTable.glyphCount; i++) {
+                final bool isCovered = classDef1.covered.contains(
+                    coverageTable.glyphArray[i]);
+                print('cover ${font.getStringFromGlyph(
+                    coverageTable.glyphArray[i])} ${isCovered}');
+                List<int> class0 = new List<int>();
+                if (!isCovered) {
+                  class0.add(coverageTable.glyphArray[i]);
+                  for (var j = 0; j < classDef2.classRangeCount; j++) {
+                    _ClassRangeRecord record2 = classDef2.classRangeRecords[j];
+                    final int xAdvance = classRecords[0][record2
+                        .classDef];
+                    if (xAdvance != 0) {
+                      print('class1Def.class ${0} class2Def.class ${record2
+                          .classDef} advance $xAdvance');
+                      for (var l = record2.startGlyphID; l <=
+                          record2.endGlyphID; l++) {
+                        _registerKerning(
+                            coverageTable.glyphArray[i], l, xAdvance);
+                      }
+                    }
+                  }
+                }
+              }
             } else if (coverageFormat == 2) {
               // TODO
               print('CoverageFormat 2');
@@ -287,7 +321,11 @@ class TtfTableGpos implements TtfTable {
     classDefFormat.classRangeRecords =
     new List<_ClassRangeRecord>(classDefFormat.classRangeCount);
     for (var i = 0; i < classDefFormat.classRangeCount; i++) {
-      classDefFormat.classRangeRecords[i] = _parseClassRangeRecord(reader);
+      final _ClassRangeRecord record = _parseClassRangeRecord(reader);
+      classDefFormat.classRangeRecords[i] = record;
+      for (var j = record.startGlyphID; j <= record.endGlyphID; j++) {
+        classDefFormat.covered.add(j);
+      }
     }
     return classDefFormat;
   }
@@ -306,9 +344,12 @@ class TtfTableGpos implements TtfTable {
   void _registerKerning(int leftGlyphId, int rightGlyphId, int value) {
     int leftKeyCode = font.cmap.glyphToCharIndexMap[leftGlyphId];
     int rightKeyCode = font.cmap.glyphToCharIndexMap[rightGlyphId];
-    String left = font.getStringFromGlyph(leftGlyphId);
-    String right = font.getStringFromGlyph(rightGlyphId);
-    print('kerning $leftKeyCode $left $rightKeyCode $right $value');
+    if (leftKeyCode == null || rightKeyCode == null) {
+      return;
+    }
+//    String left = font.getStringFromGlyph(leftGlyphId);
+//    String right = font.getStringFromGlyph(rightGlyphId);
+//    print('kerning $leftKeyCode $left $rightKeyCode $right $value');
     if (!kernings.containsKey(leftKeyCode)) {
       kernings[leftKeyCode] = new Map<int, int>();
     }
@@ -405,6 +446,7 @@ class _ClassDefFormat2 {
   int classRangeCount; // Number of ClassRangeRecords
   List<
       _ClassRangeRecord> classRangeRecords; // Array of ClassRangeRecords - ordered by startGlyphID
+  Set<int> covered = new Set<int>();
 }
 
 class _ClassRangeRecord {

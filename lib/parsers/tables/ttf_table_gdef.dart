@@ -19,7 +19,7 @@ class TtfTableGdef implements TtfTable {
     ligCaretListOffset = reader.readUnsignedShort();
     markAttachClassDefOffset = reader.readUnsignedShort();
 
-    print('GDEF $majorVersion $minorVersion $glyphClassDefOffset $attachListOffset $ligCaretListOffset $markAttachClassDefOffset');
+//    print('GDEF $majorVersion $minorVersion $glyphClassDefOffset $attachListOffset $ligCaretListOffset $markAttachClassDefOffset');
 //    reader.seek(lookupListOffset);
 //    print('lookupCount ${reader.readUnsignedShort()}');
 //    for (var i = 0; i < nTables; i++) {
