@@ -41,19 +41,20 @@ class TtfTableGpos implements TtfTable {
               .lookupFlag} subTableCount ${lookupTable.subTableCount}');
       if (lookupTable.lookupType == 2) {
         for (var i = 0; i < lookupTable.subTableCount; i++) {
-          final int pairSetStart = lookupTableStart +
+          final int subtableStart = lookupTableStart +
               lookupTable.subtableOffsets[i];
-          reader.seek(pairSetStart);
+          reader.seek(subtableStart);
           var posFormat = reader.readUnsignedShort();
           if (posFormat == 1) {
             var pairPosFormat1 = _parsePairPosFormat1(reader);
             // TODO make sure valueFormat1 == 4 and valueFormat2 == 0
-            if (pairPosFormat1.valueFormat1 == 4 && pairPosFormat1.valueFormat2 == 0) {
+            if (pairPosFormat1.valueFormat1 == 4 &&
+                pairPosFormat1.valueFormat2 == 0) {
               for (var j = 0; j < pairPosFormat1.pairSetCount; j++) {
-                reader.seek(pairSetStart + pairPosFormat1.pairSetOffsets[j]);
+                reader.seek(subtableStart + pairPosFormat1.pairSetOffsets[j]);
                 pairPosFormat1.pairSets[j] = _parsePairSet(reader);
               }
-              reader.seek(pairSetStart + pairPosFormat1.coverageOffset);
+              reader.seek(subtableStart + pairPosFormat1.coverageOffset);
               final coverageFormat = reader.readUnsignedShort();
               if (coverageFormat == 1) {
                 final coverageTable = _parseCoverageFormat1(reader);
@@ -66,53 +67,79 @@ class TtfTableGpos implements TtfTable {
                         record.valueRecord1.xAdvance);
                   }
                 }
+              } else if (coverageFormat == 2) {
+                // TODO
               }
             }
-          } else if (posFormat == 2) {
+          } else if (posFormat == 2) { // PairPosFormat 2
             var pairPosFormat = _parsePairPosFormat2(reader);
-            for (var i = 0; i <
-                pairPosFormat.class1Count * pairPosFormat.class2Count; i++) {
-//              var xAdvance = reader.readUnsignedShort();
-//              var secondGlyph = String.fromCharCode(
-//                  font.cmap.glyphToCharIndexMap[reader
-//                      .readUnsignedShort()]);
-              var valueRecord1 = reader.readSignedShort();
-//              print('xAdvance $valueRecord1');
-            }
-            reader.seek(pairSetStart + pairPosFormat.classDef1Offset);
-            var classFormat = reader.readUnsignedShort();
-            if (classFormat == 1) {
-              var startGlyphID = reader.readUnsignedShort();
-              var glyphCount = reader.readUnsignedShort();
-              print(
-                  'classFormat $classFormat startGlyphID $startGlyphID glyphCount $glyphCount');
-            } else if (classFormat == 2) {
-              var classRangeCount = reader.readUnsignedShort();
-              print(
-                  'classFormat $classFormat classRangeCount $classRangeCount');
-            }
-            reader.seek(pairSetStart + pairPosFormat.classDef2Offset);
-            var class2Format = reader.readUnsignedShort();
-            if (class2Format == 1) {
-              var startGlyphID = reader.readUnsignedShort();
-              var glyphCount = reader.readUnsignedShort();
-              print(
-                  'ClassDefFormat$class2Format startGlyphID $startGlyphID glyphCount $glyphCount');
-            } else if (class2Format == 2) {
-              var classRangeCount = reader.readUnsignedShort();
-              print(
-                  'ClassDefFormat$class2Format classRangeCount $classRangeCount');
-              for (var i = 0; i < classRangeCount; i++) {
-                var startGlyphID = reader.readUnsignedShort();
-                int startStr = font.cmap.glyphToCharIndexMap[startGlyphID] ?? 0;
-                var endGlyphID = reader.readUnsignedShort();
-                int endStr = font.cmap.glyphToCharIndexMap[endGlyphID] ?? 0;
-                var classDef = reader.readUnsignedShort();
-                print('start $startGlyphID ${font.getStringFromGlyph(
-                    startGlyphID)}'
-                    ' end $endGlyphID ${font.getStringFromGlyph(
-                    endGlyphID)} class $classDef');
+            List<List<int>> classRecords = new List.generate(pairPosFormat.class1Count, (_) => new List<int>(pairPosFormat.class2Count));
+//              (pairPosFormat.class1Count * pairPosFormat.class2Count);
+//            print('classRecords ${classRecords.length}');
+            for (var i = 0; i < pairPosFormat.class1Count; i++) {
+              var start = i * pairPosFormat.class2Count;
+              for (var j = 0; j < pairPosFormat.class2Count; j++) {
+                var valueRecord1 = reader.readSignedShort();
+                classRecords[i][j] = valueRecord1;
+//                print('$j xAdvance $valueRecord1');
               }
+            }
+            reader.seek(subtableStart + pairPosFormat.classDef1Offset);
+            var classDef1Format = reader.readUnsignedShort();
+            _ClassDefFormat2 classDef1;
+            if (classDef1Format == 1) {
+              var classDef1Format1 = _parseClassDefFormat1(reader);
+              print(
+                  'ClassDef1Format $classDef1Format startGlyphID ${classDef1Format1
+                      .startGlyphID} glyphCount ${classDef1Format1.glyphCount}');
+            } else if (classDef1Format == 2) {
+              classDef1 = _parseClassDefFormat2(reader);
+              print(
+                  'ClassDef1Format $classDef1Format classRangeCount ${classDef1
+                      .classRangeCount}');
+            }
+            reader.seek(subtableStart + pairPosFormat.classDef2Offset);
+            var classDef2Format = reader.readUnsignedShort();
+            _ClassDefFormat2 classDef2;
+            if (classDef2Format == 1) {
+              var classDef2Format1 = _parseClassDefFormat1(reader);
+              print(
+                  'ClassDef2Format $classDef2Format startGlyphID ${classDef2Format1
+                      .startGlyphID} glyphCount ${classDef2Format1.glyphCount}');
+            } else if (classDef2Format == 2) {
+              classDef2 = _parseClassDefFormat2(reader);
+              print(
+                  'ClassDef2Format $classDef2Format classRangeCount ${classDef2
+                      .classRangeCount}');
+            }
+            for (var i = 0; i < classDef1.classRangeCount; i++) {
+              _ClassRangeRecord record1 = classDef1.classRangeRecords[i];
+              for (var j = 0; j < classDef2.classRangeCount; j++) {
+                _ClassRangeRecord record2 = classDef2.classRangeRecords[j];
+                final int xAdvance = classRecords[record1.classDef][record2.classDef];
+                if (xAdvance != 0) {
+//                  print('class1Def.class ${record1
+//                      .classDef} class2Def.class ${record2
+//                      .classDef} advance $xAdvance');
+                  for (var k = record1.startGlyphID; k <= record1.endGlyphID; k++) {
+                    for (var l = record2.startGlyphID; l <= record2.endGlyphID; l++) {
+                      _registerKerning(k, l, xAdvance);
+                    }
+                  }
+                }
+              }
+            }
+
+            reader.seek(subtableStart + pairPosFormat.coverageOffset);
+            final coverageFormat = reader.readUnsignedShort();
+            if (coverageFormat == 1) {
+              final coverageTable = _parseCoverageFormat1(reader);
+              print('CoverageFormat 1 count ${coverageTable
+                  .glyphCount} ${coverageTable.glyphArray}');
+            } else if (coverageFormat == 2) {
+              // TODO
+              print('CoverageFormat 2');
+              final coverageTable = _parseCoverageFormat2(reader);
             }
           }
         }
@@ -120,7 +147,6 @@ class TtfTableGpos implements TtfTable {
     }
     kernings.forEach((key, value) {
       print('$key $value');
-
     });
   }
 
@@ -157,11 +183,11 @@ class TtfTableGpos implements TtfTable {
     pairPosFormat.pairSetCount = reader.readUnsignedShort();
     pairPosFormat.pairSetOffsets = new List<int>(pairPosFormat.pairSetCount);
     pairPosFormat.pairSets = new List<_PairSet>(pairPosFormat.pairSetCount);
-    print(
-        'PosFormat1 coverageOffset ${pairPosFormat.coverageOffset} '
-            'vF1 ${pairPosFormat.valueFormat1} '
-            'vF2 ${pairPosFormat.valueFormat2} '
-            'pairSetCount ${pairPosFormat.pairSetCount}');
+//    print(
+//        'PosFormat1 coverageOffset ${pairPosFormat.coverageOffset} '
+//            'vF1 ${pairPosFormat.valueFormat1} '
+//            'vF2 ${pairPosFormat.valueFormat2} '
+//            'pairSetCount ${pairPosFormat.pairSetCount}');
     // valueFormat1 == 4 X_ADVANCE int16
     for (var j = 0; j < pairPosFormat.pairSetCount; j++) {
       pairPosFormat.pairSetOffsets[j] = reader.readUnsignedShort();
@@ -179,7 +205,7 @@ class TtfTableGpos implements TtfTable {
     pairPosFormat.class1Count = reader.readUnsignedShort();
     pairPosFormat.class2Count = reader.readUnsignedShort();
     print(
-        'PosFormat1 coverageOffset ${pairPosFormat.coverageOffset}'
+        'PosFormat2 coverageOffset ${pairPosFormat.coverageOffset}'
             ' vF1 ${pairPosFormat.valueFormat1} vF2 ${pairPosFormat
             .valueFormat2}'
             ' classDef1Offset ${pairPosFormat.classDef1Offset}'
@@ -195,14 +221,10 @@ class TtfTableGpos implements TtfTable {
     pairSet.pairValueRecords =
     new List<_PairValueRecord>(pairSet.pairValueCount);
 
-    print(
-        'pairValueCount ${pairSet
-            .pairValueCount}'); // secondGlyph $secondGlyph vR1 $valueRecord1 vR2 $valueRecord2');
-//    if (pairPosFormat1.valueFormat1 == 4) {
+//    print('pairValueCount ${pairSet.pairValueCount}'); // secondGlyph $secondGlyph vR1 $valueRecord1 vR2 $valueRecord2');
     for (var k = 0; k < pairSet.pairValueCount; k++) {
       pairSet.pairValueRecords[k] = _parsePairValueRecord(reader);
     }
-//    }
     return pairSet;
   }
 
@@ -213,9 +235,8 @@ class TtfTableGpos implements TtfTable {
     pairValueRecord.valueRecord1 = new _ValueRecord()
       ..xAdvance = reader.readSignedShort();
     // Note: we only consider valueRecord1 so far
-//    pairValueRecord.valueRecord2 = pairPosFormat1.valueFormat2 != 0 ? reader.readSignedShort() : 0;
-    print('secondGlyph $secondGlyph vR1 ${pairValueRecord.valueRecord1
-        .xAdvance}');
+//    print('secondGlyph $secondGlyph vR1 ${pairValueRecord.valueRecord1
+//        .xAdvance}');
     return pairValueRecord;
   }
 
@@ -226,14 +247,68 @@ class TtfTableGpos implements TtfTable {
     for (var k = 0; k < coverageFormat.glyphCount; k++) {
       coverageFormat.glyphArray[k] = reader.readUnsignedShort();
       var glyphCode = font.getStringFromGlyph(coverageFormat.glyphArray[k]);
-      print('glyphID ${coverageFormat.glyphArray[k]} char $glyphCode');
+//      print('glyphID ${coverageFormat.glyphArray[k]} char $glyphCode');
     }
     return coverageFormat;
+  }
+
+  _CoverageFormat2 _parseCoverageFormat2(StreamReader reader) {
+    final coverageFormat = new _CoverageFormat2();
+    coverageFormat.rangeCount = reader.readUnsignedShort();
+    coverageFormat.rangeRecords =
+    new List<_RangeRecord>(coverageFormat.rangeCount);
+    print('CoverageFormat2 rangeCount ${coverageFormat.rangeCount}');
+    for (var i = 0; i < coverageFormat.rangeCount; i++) {
+      coverageFormat.rangeRecords[i] = _parseRangeRecord(reader);
+    }
+    return coverageFormat;
+  }
+
+  _RangeRecord _parseRangeRecord(StreamReader reader) {
+    var rangeRecord = new _RangeRecord();
+    rangeRecord.startGlyphID = reader.readUnsignedShort();
+    rangeRecord.endGlyphID = reader.readUnsignedShort();
+    rangeRecord.startCoverageIndex = reader.readUnsignedShort();
+//    print('RR ${rangeRecord.startGlyphID} ${rangeRecord.endGlyphID} ${rangeRecord.startCoverageIndex}');
+    return rangeRecord;
+  }
+
+  _ClassDefFormat1 _parseClassDefFormat1(StreamReader reader) {
+    final _ClassDefFormat1 classFormat = new _ClassDefFormat1();
+    classFormat.startGlyphID = reader.readUnsignedShort();
+    classFormat.glyphCount = reader.readUnsignedShort();
+    // TODO parse classValueArray
+    return classFormat;
+  }
+
+  _ClassDefFormat2 _parseClassDefFormat2(StreamReader reader) {
+    final _ClassDefFormat2 classDefFormat = new _ClassDefFormat2();
+    classDefFormat.classRangeCount = reader.readUnsignedShort();
+    classDefFormat.classRangeRecords =
+    new List<_ClassRangeRecord>(classDefFormat.classRangeCount);
+    for (var i = 0; i < classDefFormat.classRangeCount; i++) {
+      classDefFormat.classRangeRecords[i] = _parseClassRangeRecord(reader);
+    }
+    return classDefFormat;
+  }
+
+  _ClassRangeRecord _parseClassRangeRecord(StreamReader reader) {
+    var rangeRecord = new _ClassRangeRecord();
+    rangeRecord.startGlyphID = reader.readUnsignedShort();
+    rangeRecord.endGlyphID = reader.readUnsignedShort();
+    rangeRecord.classDef = reader.readUnsignedShort();
+    print('CRR ${font.getStringFromGlyph(rangeRecord.startGlyphID)} ${font.cmap
+        .glyphToCharIndexMap[rangeRecord.startGlyphID]} ${font
+        .getStringFromGlyph(rangeRecord.endGlyphID)} ${rangeRecord.classDef}');
+    return rangeRecord;
   }
 
   void _registerKerning(int leftGlyphId, int rightGlyphId, int value) {
     int leftKeyCode = font.cmap.glyphToCharIndexMap[leftGlyphId];
     int rightKeyCode = font.cmap.glyphToCharIndexMap[rightGlyphId];
+    String left = font.getStringFromGlyph(leftGlyphId);
+    String right = font.getStringFromGlyph(rightGlyphId);
+    print('kerning $leftKeyCode $left $rightKeyCode $right $value');
     if (!kernings.containsKey(leftKeyCode)) {
       kernings[leftKeyCode] = new Map<int, int>();
     }
