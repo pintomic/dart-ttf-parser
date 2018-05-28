@@ -151,9 +151,7 @@ class TtfTableGpos implements TtfTable {
                     coverageTable.glyphArray[i]);
                 print('cover ${font.getStringFromGlyph(
                     coverageTable.glyphArray[i])} ${isCovered}');
-                List<int> class0 = new List<int>();
                 if (!isCovered) {
-                  class0.add(coverageTable.glyphArray[i]);
                   for (var j = 0; j < classDef2.classRangeCount; j++) {
                     _ClassRangeRecord record2 = classDef2.classRangeRecords[j];
                     final int xAdvance = classRecords[0][record2
@@ -174,6 +172,26 @@ class TtfTableGpos implements TtfTable {
               // TODO
               print('CoverageFormat 2');
               final coverageTable = _parseCoverageFormat2(reader);
+              for (var i = 0; i < coverageTable.rangeCount; i++) {
+                final _RangeRecord record = coverageTable.rangeRecords[i];
+                for (var j = record.startGlyphID; j <= record.endGlyphID; j++) {
+                  if (!classDef1.covered.contains(j)) {
+                    for (var k = 0; k < classDef2.classRangeCount; k++) {
+                      _ClassRangeRecord record2 = classDef2.classRangeRecords[k];
+                      final int xAdvance = classRecords[0][record2
+                          .classDef];
+                      if (xAdvance != 0) {
+                        print('class1Def.class ${0} class2Def.class ${record2
+                            .classDef} advance $xAdvance');
+                        for (var l = record2.startGlyphID; l <=
+                            record2.endGlyphID; l++) {
+                          _registerKerning(j, l, xAdvance);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
