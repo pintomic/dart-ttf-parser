@@ -205,15 +205,13 @@ class TtfTableGpos implements TtfTable {
             .rangeCount}');
         for (var i = 0; i < coverageFormat2.rangeCount; i++) {
           final _RangeRecord record = coverageFormat2.rangeRecords[i];
-//          print('rangeRecrod ${record.startCoverageIndex} ${record.startGlyphID} ${record.endGlyphID}');
+          print('rangeRecrod ${record.startCoverageIndex} ${record.startGlyphID} ${record.endGlyphID}');
           for (var j = 0; j <= record.endGlyphID - record.startGlyphID; j++) {
-            var leftGlyphId = record.startCoverageIndex + record.startGlyphID;
-            for (var k = 0; k <
-                pairPosFormat1.pairSets[record.startCoverageIndex + j]
-                    .pairValueCount;
-            k++) {
-              var pvr = pairPosFormat1.pairSets[record.startCoverageIndex + j]
-                  .pairValueRecords[k];
+            final int leftGlyphId = record.startGlyphID + j;
+            final _PairSet pairSet = pairPosFormat1.pairSets[record.startCoverageIndex + j];
+            for (var k = 0; k < pairSet.pairValueCount; k++) {
+              final _PairValueRecord pvr = pairSet.pairValueRecords[k];
+              print('pvr $k left $leftGlyphId right ${pvr.secondGlyph} ${pvr.valueRecord1.xAdvance}');
               _registerKerning(leftGlyphId, pvr.secondGlyph,
                   pvr.valueRecord1.xAdvance);
             }
