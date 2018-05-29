@@ -71,6 +71,6 @@ class TtfFont {
   String getStringFromGlyph(int glyphID) {
     int charCode = cmap.glyphToCharIndexMap[glyphID];
     if (charCode == null) return '';
-    return String.fromCharCode(charCode);
+    return new String.fromCharCode(charCode);
   }
 }

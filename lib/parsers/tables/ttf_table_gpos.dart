@@ -71,7 +71,7 @@ class TtfTableGpos implements TtfTable {
       }
     }
     kernings.forEach((key, value) {
-      print('$key $value');
+//      print('$key $value');
     });
     print('-----------------------DONE----------------------------');
   }
